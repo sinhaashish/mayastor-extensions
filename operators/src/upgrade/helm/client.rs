@@ -139,16 +139,18 @@ impl HelmArgs {
             command.arg(arg.as_ref());
         }
         self.apply_args(&mut command);
+        println!("command {:?} ", command);
         let output = command.output();
+        println!("output {:?} ", output);
 
         match output {
             Ok(out) => {
-                if !out.stderr.is_empty() {
-                    let stderr = String::from_utf8(out.stderr)
-                        .map_err(|error| Error::Utf8 { source: error })?;
-                    println!("{:?}", stderr);
-                    return Err(Error::HelmStd(stderr));
-                }
+                // if !out.stderr.is_empty() {
+                //     let stderr = String::from_utf8(out.stderr)
+                //         .map_err(|error| Error::Utf8 { source: error })?;
+                //     println!("{:?}", stderr);
+                //     return Err(Error::HelmStd(stderr));
+                // }
                 Ok(out)
             }
             Err(error) => Err(Error::HelmCommandNotExecutable { source: error }),
@@ -214,7 +216,7 @@ impl HelmClient {
     pub(crate) async fn new() -> Result<HelmClient, Error> {
         let output = HelmArgs::default()
             .version()
-            .map_err(|_| Error::HelmNotInstalled("Helm not installed".to_string()))?;
+            .map_err(|_| Error::HelmNotInstalled("Helm not installed here ashish".to_string()))?;
 
         // Convert command output into a string.
         let out_str =

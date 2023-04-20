@@ -85,4 +85,3 @@ in
   release = components { builder = project-builder; buildType = "release"; };
   debug = components { builder = project-builder; buildType = "debug"; };
 }
-

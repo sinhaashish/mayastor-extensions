@@ -1,0 +1,49 @@
+{{- if .Values.stats.aggregater.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-stats-aggregater
+  labels:
+    app: stats-aggregater
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stats-aggregater
+      {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: stats-aggregater
+        {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+        {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+    spec:
+      serviceAccount: {{ .Release.Name }}-service-account
+      imagePullSecrets:
+        - name: dockersecret
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: stats-aggregater
+          image: "{{ .Values.image.registry }}/vandanavarakantham/{{ .Chart.Name }}-stats-aggregater:callhome22"
+          command:
+            - stats-aggregater
+          ports:
+            - containerPort: 9505
+              protocol: TCP
+              name: stats
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.stats.aggregater.logLevel }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: {{ .Values.stats.aggregater.resources.limits.cpu | quote }}
+              memory: {{ .Values.stats.aggregater.resources.limits.memory | quote }}
+            requests:
+              cpu: {{ .Values.stats.aggregater.resources.requests.cpu | quote }}
+              memory: {{ .Values.stats.aggregater.resources.requests.memory | quote }}
+{{- end }}

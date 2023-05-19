@@ -510,7 +510,7 @@ loki-stack:
 obs:
   callhome:
     # -- Enable callhome
-    enabled: true
+    enabled: false
     # -- Log level for callhome
     logLevel: "info"
     resources:

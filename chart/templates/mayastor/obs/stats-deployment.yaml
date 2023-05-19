@@ -28,7 +28,7 @@ spec:
       {{- end }}
       containers:
         - name: stats-aggregater
-          image: "{{ .Values.image.registry }}/vandanavarakantham/{{ .Chart.Name }}-stats-aggregater:callhome22"
+          image: "{{ .Values.image.registry }}/vandanavarakantham/{{ .Chart.Name }}-stats-aggregater:callhome41"
           command:
             - stats-aggregater
           ports:

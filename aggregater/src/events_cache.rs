@@ -2,10 +2,14 @@ use std::{ops::DerefMut, sync::Mutex};
 
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use message::*;
+// use message::*;
 
-use crate::{message, nats::TypedNats};
-use crate::events_store::*;
+// use crate::{message, nats::TypedNats};
+use mbus_api::mbus_nats::{NatsMessageBus, Bus};
+use mbus_api::message::EventMessage;
+//use crate::events_store::*;
+use crate::events_store_cr::*;
+use k8s_openapi::api::core::v1::ConfigMap;
 
 static CACHE: OnceCell<Mutex<Cache>> = OnceCell::new();
 
@@ -28,27 +32,54 @@ impl Default for EventStruct {
 }
 
 impl EventStruct {
-    pub fn from_event_store_data(init_data: CallHomeEvent) -> Self {
-        let events = init_data.spec;
+    // pub fn from_event_store_data(init_data: CallHomeEvent) -> Self {
+    //     let events = init_data.spec;
+    //     EventStruct {
+    //         volume: Volume {
+    //             created: events.volume_events.created,
+    //             deleted: events.volume_events.deleted
+    //         },
+    //         nexus: Nexus {
+    //             created: events.nexus_events.created,
+    //             deleted: events.nexus_events.deleted
+    //         },
+    //         pool: Pool {
+    //             created: events.pool_events.created,
+    //             deleted: events.pool_events.deleted
+    //         },
+    //         replica: Replica {
+    //             created: events.replica_events.created,
+    //             deleted: events.replica_events.deleted
+    //         }
+    //     }
+    // }
+
+    pub fn from_event_store_cm_data(init_data: ConfigMap) -> Self {
+        serde_json::from_str(&init_data.data.unwrap().get("stats.json").unwrap()).unwrap()
+    }
+
+    pub fn from_event_store_data(init_data: UpdatedCallHomeEvent) -> Self {
+        let data = init_data.spec;
         EventStruct {
             volume: Volume {
-                created: events.volume_events.created,
-                deleted: events.volume_events.deleted
+                created: *data.events.get(&EventCat::Volume).unwrap().get(&EventAc::Created).unwrap(),
+                deleted: *data.events.get(&EventCat::Volume).unwrap().get(&EventAc::Deleted).unwrap()
             },
             nexus: Nexus {
-                created: events.nexus_events.created,
-                deleted: events.nexus_events.deleted
+                created: *data.events.get(&EventCat::Nexus).unwrap().get(&EventAc::Created).unwrap(),
+                deleted: *data.events.get(&EventCat::Nexus).unwrap().get(&EventAc::Deleted).unwrap()
             },
             pool: Pool {
-                created: events.pool_events.created,
-                deleted: events.pool_events.deleted
+                created: *data.events.get(&EventCat::Pool).unwrap().get(&EventAc::Created).unwrap(),
+                deleted: *data.events.get(&EventCat::Pool).unwrap().get(&EventAc::Deleted).unwrap()
             },
             replica: Replica {
-                created: events.replica_events.created,
-                deleted: events.replica_events.deleted
+                created: *data.events.get(&EventCat::Replica).unwrap().get(&EventAc::Created).unwrap(),
+                deleted: *data.events.get(&EventCat::Replica).unwrap().get(&EventAc::Deleted).unwrap()
             }
         }
-    }
+        //EventStruct { volume: Volume{created: events.volume_events.created, deleted: events.volume_events.deleted }, nexus: Nexus::default() } 
+     }
 
     fn inc_counter(&mut self, category: &str, action: &str) -> Result<(), String> {
         match category {
@@ -180,22 +211,20 @@ impl Cache {
 }
 
 /// To store data in shared variable i.e cache.
-pub async fn store_events(nats: TypedNats) -> Result<(), String> {
+pub async fn store_events(mut nats: NatsMessageBus) -> Result<(), String> {
     // Store events count
-    let mut sub = nats.subscribe_jetstream::<EventMessage>().await.unwrap();
+    let mut sub = nats.subscribe::<EventMessage>().await.map_err(|error| {
+        println!("Error subscribing to jetstream: {:?}", error)
+    }).unwrap();
     let mut count = 0;
     loop {
             if let Some(message) = sub.next().await
             {
                 count += 1;
                 println!(
-                    "{}\t{}\t{}\t{}\t{}",
+                    "{}\t{:?}",
                     count,
-                    message.category.to_string(),
-                    message.action.to_string(),
-                    message.target.to_string(),
-                    message.node.to_string()
-                );
+                    message);
                 let mut cache = match Cache::get_cache().lock() {
                     Ok(cache) => cache,
                     Err(error) => {

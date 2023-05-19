@@ -2,7 +2,8 @@ mod events_cache;
 use events_collector::StatsCollector;
 use events_cache::*;
 use exporter_config::ExporterConfig;
-use nats_connection::NatsConnectionSpec;
+// use nats_connection::NatsConnectionSpec;
+use mbus_api::mbus_nats::{message_bus_init, NatsMessageBus};
 use std::{thread};
 mod message;
 mod nats;
@@ -11,13 +12,16 @@ mod retry;
 mod exporter_config;
 mod events_collector;
 
-mod events_store;
-use events_store::*;
+// mod events_store_cm;
+// use events_store_cm::*;
+mod events_store_cr;
+use events_store_cr::*;
 
 use actix_web::{http::header, middleware, web, HttpResponse, HttpServer, Responder};
 use prometheus::{Encoder, Registry};
 use tracing::{error, warn};
 use std::time::Duration;
+use k8s_openapi::api::core::v1::ConfigMap;
 
 // Initialize exporter config that are passed through arguments
 fn initialize_exporter() {
@@ -25,20 +29,37 @@ fn initialize_exporter() {
 }
 
 /// Initialize cache
-async fn initialize_events_cache(init_data: CallHomeEvent) {
+async fn initialize_events_cache(init_data: UpdatedCallHomeEvent) {
     Cache::initialize(EventStruct::from_event_store_data(init_data));
 }
 
 /// Initialize events_store
-async fn initialize_events_store() -> CallHomeEvent {
+async fn initialize_events_store() -> UpdatedCallHomeEvent {
     initialize_cr().await.unwrap()
 }
 
+async fn mbus_init() -> NatsMessageBus {
+    // NatsMessageBus::new("nats://localhost:4222").await.subscribe().await.unwrap()
+    message_bus_init("nats://mayastor-nats:4222").await
+}
+
+// /// Initialize cache from cm
+// async fn initialize_events_cache(init_data: ConfigMap) {
+//     Cache::initialize(EventStruct::from_event_store_cm_data(init_data));
+// }
+
+// /// Initialize events_store_cm
+// async fn initialize_events_store_cm() -> ConfigMap {
+//     initialize_configmap().await.unwrap()
+// }
+
+
 #[tokio::main]
 async fn main() -> Result<(), async_nats::Error> {
-    let nats = NatsConnectionSpec::from_url("nats://mayastor-nats:4222")?
-        .connect()
-        .await?;
+    // let nats = NatsConnectionSpec::from_url("nats://mayastor-nats:4222")?
+    //     .connect()
+    //     .await?;
+    let nats = mbus_init().await;
     let init_data = initialize_events_store().await;
     initialize_events_cache(init_data).await;
     initialize_exporter();

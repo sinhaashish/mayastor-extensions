@@ -28,9 +28,17 @@ rules:
 - apiGroups: ["openebs.io"]
   resources: ["diskpools/status"]
   verbs: ["update", "patch"]
+  # must read cm info
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "update", "create", "delete", "patch"]
   # must read callhomeevents info
 - apiGroups: ["openebs.io"]
   resources: ["callhomeevents"]
+  verbs: ["get", "list", "watch", "update", "replace", "patch", "create"]
+  # must read updatedcallhomeevents info
+- apiGroups: ["openebs.io"]
+  resources: ["updatedcallhomeevents"]
   verbs: ["get", "list", "watch", "update", "replace", "patch", "create"]
   # external provisioner & attacher
 - apiGroups: [""]

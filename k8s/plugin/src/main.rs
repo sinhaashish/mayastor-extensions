@@ -14,7 +14,7 @@ use std::{env, path::PathBuf};
 mod resources;
 use crate::resources::GetResourcesK8s;
 use resources::Operations;
-use upgrade::{preflight_validations, upgrade_resources::upgrade::DeleteResources};
+use upgrade::upgrade_plugin::{preflight_validations, upgrade::DeleteResources};
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]

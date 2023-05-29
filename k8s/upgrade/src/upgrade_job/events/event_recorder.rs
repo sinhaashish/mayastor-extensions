@@ -16,7 +16,7 @@ use tracing::error;
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all(serialize = "camelCase"))]
-pub(crate) struct EventNote {
+pub struct EventNote {
     from_version: String,
     to_version: String,
     message: String,

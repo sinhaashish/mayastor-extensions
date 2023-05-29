@@ -59,7 +59,7 @@ let
     "rpc"
     "console-logger"
     "call-home"
-    "upgrade-job"
+    "upgrade"
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
     "dependencies/control-plane/control-plane/plugin"

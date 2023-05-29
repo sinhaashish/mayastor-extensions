@@ -10,7 +10,7 @@ use crate::{
         kube_client::KubeClientSet,
         rest_client::RestClientSet,
     },
-    helm::chart::Chart,
+    upgrade_job::helm::chart::Chart,
     vec_to_strings,
 };
 use regex::bytes::Regex;

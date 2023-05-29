@@ -6,7 +6,7 @@ use crate::{
             YamlParseFromSlice,
         },
     },
-    helm::{chart::CoreValues, client::HelmReleaseClient},
+    upgrade_job::helm::{chart::CoreValues, client::HelmReleaseClient},
 };
 use semver::{Version, VersionReq};
 use snafu::ResultExt;

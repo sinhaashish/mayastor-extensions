@@ -3,7 +3,7 @@ use crate::{
         CHART_VERSION_LABEL_KEY, CORE_CHART_NAME, PRODUCT, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME,
         UMBRELLA_CHART_UPGRADE_DOCS_URL,
     },
-    events::event_recorder::EventNote,
+    upgrade_job::events::event_recorder::EventNote,
 };
 use snafu::Snafu;
 use std::path::PathBuf;
@@ -15,7 +15,7 @@ use url::Url;
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
 #[snafu(context(suffix(false)))]
-pub(crate) enum Error {
+pub enum Error {
     /// Error for when the storage REST API URL is parsed.
     #[snafu(display(
         "Failed to parse {} REST API URL {}: {}",
@@ -510,7 +510,273 @@ pub(crate) enum Error {
         from_version: String,
         to_version: String,
     },
+
+    /// Error for no upgrade event present.
+    #[snafu(display("No upgrade event present."))]
+    UpgradeEventNotPresent,
+
+    /// Error for no Deployment present.
+    #[snafu(display("No deployment present."))]
+    NoDeploymentPresent,
+
+    /// No message in upgrade event.
+    #[snafu(display("No Message present in event."))]
+    MessageInEventNotPresent,
+
+    /// Nodes are in cordoned state.
+    #[snafu(display("Nodes are in cordoned state."))]
+    NodesInCordonedState,
+
+    /// Single replica volume present in cluster.
+    #[snafu(display("Single replica volume present in cluster."))]
+    SingleReplicaVolumeErr,
+
+    /// Cluster is rebuilding replica of some volumes.
+    #[snafu(display("Cluster is rebuilding replica of some volumes."))]
+    VolumeRebuildInProgress,
+
+    /// Deserialization error for event.
+    #[snafu(display("Error in deserializing upgrade event {} Error {}", event, source))]
+    EventSerdeDeserialization {
+        event: String,
+        source: serde_json::Error,
+    },
+
+    /// Failed in creating service account.
+    #[snafu(display("Service account: {} creation failed Error: {}", name, source))]
+    ServiceAccountCreate { name: String, source: kube::Error },
+
+    /// Failed in deletion service account.
+    #[snafu(display("Service account: {} deletion failed Error: {}", name, source))]
+    ServiceAccountDelete { name: String, source: kube::Error },
+
+    /// Failed in creating cluster role.
+    #[snafu(display("Cluster role: {} creation failed Error: {}", name, source))]
+    ClusterRoleCreate { name: String, source: kube::Error },
+
+    /// Failed in deletion cluster role.
+    #[snafu(display("Cluster role: {} deletion Error: {}", name, source))]
+    ClusterRoleDelete { name: String, source: kube::Error },
+
+    /// Failed in deletion cluster role binding.
+    #[snafu(display("Cluster role binding: {} deletion failed Error: {}", name, source))]
+    ClusterRoleBindingDelete { name: String, source: kube::Error },
+
+    /// Failed in creating cluster role binding.
+    #[snafu(display("Cluster role binding: {} creation failed Error: {}", name, source))]
+    ClusterRoleBindingCreate { name: String, source: kube::Error },
+
+    /// Failed in creating upgrade job.
+    #[snafu(display("Upgrade Job: {} creation failed Error: {}", name, source))]
+    UpgradeJobCreate { name: String, source: kube::Error },
+
+    /// Failed in deleting upgrade job.
+    #[snafu(display("Upgrade Job: {} deletion failed Error: {}", name, source))]
+    UpgradeJobDelete { name: String, source: kube::Error },
+
+    /// Error for when the image format is invalid.
+    #[snafu(display("Failed to find a valid image in Deployment."))]
+    ReferenceDeploymentInvalidImage,
+
+    /// Error for when the .spec.template.spec.contains[0].image is a None.
+    #[snafu(display("Failed to find an image in Deployment."))]
+    ReferenceDeploymentNoImage,
+
+    /// Error for when .spec is None for the reference Deployment.
+    #[snafu(display("No .spec found for the reference Deployment"))]
+    ReferenceDeploymentNoSpec,
+
+    /// Error for when .spec.template.spec is None for the reference Deployment.
+    #[snafu(display("No .spec.template.spec found for the reference Deployment"))]
+    ReferenceDeploymentNoPodTemplateSpec,
+
+    /// Error for when .spec.template.spec.contains[0] does not exist.
+    #[snafu(display("Failed to find the first container of the Deployment."))]
+    ReferenceDeploymentNoContainers,
+
+    /// Node spec not present error.
+    #[snafu(display("Node spec not present, node: {}", node))]
+    NodeSpecNotPresent { node: String },
+
+    /// Error for when the pod.metadata.name is a None.
+    #[snafu(display("Pod name not present."))]
+    PodNameNotPresent,
+
+    /// Error for when the job.status is a None.
+    #[snafu(display("Upgrade Job: {} status not present.", name))]
+    UpgradeJobStatusNotPresent { name: String },
+
+    /// Error for when the upgrade job is not present.
+    #[snafu(display("Upgrade Job: {} in namespace {} does not exist.", name, namespace))]
+    UpgradeJobNotPresent { name: String, namespace: String },
+
+    /// Error for when a Kubernetes API request for GET-ing a list of Deployments filtered by
+    /// label(s) fails.
+    #[snafu(display(
+        "Failed to list Deployments with label {} in namespace {}: {}",
+        label,
+        namespace,
+        source
+    ))]
+    ListDeploymantsWithLabel {
+        source: kube::Error,
+        label: String,
+        namespace: String,
+    },
+
+    /// Error for when a Kubernetes API request for GET-ing a list of events filtered by
+    /// filed selector fails.
+    #[snafu(display("Failed to list Events with field selector {}: {}", field, source))]
+    ListEventsWithFieldSelector { source: kube::Error, field: String },
+
+    /// Error listing the pvc list.
+    #[snafu(display("Failed to list pvc : {}", source))]
+    ListPVC { source: kube::Error },
+
+    /// Error listing the volumes.
+    #[snafu(display("Failed to list volumes : {}", source))]
+    ListVolumes {
+        source: openapi::tower::client::Error<openapi::models::RestJsonError>,
+    },
+
+    /// Error when a Get Upgrade job fails.
+    #[snafu(display("Failed to get Upgrade Job {}: {}", name, source))]
+    GetUpgradeJob { source: kube::Error, name: String },
+
+    /// Error when a Get ServiceAccount fails.
+    #[snafu(display("Failed to get service account {}: {}", name, source))]
+    GetServiceAccount { source: kube::Error, name: String },
+
+    /// Error when a Get ClusterRole fails.
+    #[snafu(display("Failed to get cluster role {}: {}", name, source))]
+    GetClusterRole { source: kube::Error, name: String },
+
+    /// Error when a Get CLusterRoleBinding fails.
+    #[snafu(display("Failed to get cluster role binding {}: {}", name, source))]
+    GetClusterRoleBinding { source: kube::Error, name: String },
+
+    /// Openapi configuration error.
+    #[snafu(display("openapi configuration Error: {}", source))]
+    OpenapiClientConfiguration { source: anyhow::Error },
+
+    /// Source and target version are same.
+    #[snafu(display("Source and target version are same for upgrade."))]
+    SourceTargetVersionSame,
+
+    /// Error when source version is not a valid for upgrade.
+    #[snafu(display("Not a valid source version for upgrade."))]
+    NotAValidSourceForUpgrade,
+
+    /// K8s client error.
+    #[snafu(display("K8Client Error: {}", source))]
+    K8sClient { source: kube::Error },
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
-pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
+pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+impl From<Error> for i32 {
+    fn from(err: Error) -> Self {
+        match err {
+            Error::RestUrlParse { .. } => 401,
+            Error::K8sClientGeneration { .. } => 402,
+            Error::GetNamespace { .. } => 403,
+            Error::RestClientConfiguration { .. } => 404,
+            Error::HelmCommand { .. } => 405,
+            Error::HelmVersion { .. } => 406,
+            Error::HelmRelease { .. } => 407,
+            Error::NoInputHelmChartDir { .. } => 408,
+            Error::JobPodOwnerNotFound { .. } => 409,
+            Error::JobPodHasTooManyOwners { .. } => 410,
+            Error::JobPodOwnerIsNotJob { .. } => 411,
+            Error::YamlParseFromSlice { .. } => 412,
+            Error::YamlParseFromFile { .. } => 413,
+            Error::YamlParseBufferForUnsupportedVersion { .. } => 414,
+            Error::DetermineChartVariant { .. } => 415,
+            Error::ValidateDirPath { .. } => 416,
+            Error::ValidateFilePath { .. } => 417,
+            Error::NotADirectory { .. } => 418,
+            Error::NotAFile { .. } => 419,
+            Error::OpeningFile { .. } => 420,
+            Error::FindingHelmChart { .. } => 421,
+            Error::GetPod { .. } => 422,
+            Error::ListPodsWithLabel { .. } => 423,
+            Error::ListPodsWithLabelAndField { .. } => 424,
+            Error::EmptyPodSpec { .. } => 425,
+            Error::EmptyPodNodeName { .. } => 426,
+            Error::EmptyPodUid { .. } => 427,
+            Error::StorageNodeUncordon { .. } => 428,
+            Error::PodDelete { .. } => 429,
+            Error::ListStorageNodes { .. } => 430,
+            Error::GetStorageNode { .. } => 431,
+            Error::EmptyStorageNodeSpec { .. } => 432,
+            Error::ListStorageVolumes { .. } => 433,
+            Error::DrainStorageNode { .. } => 434,
+            Error::YamlStructure { .. } => 435,
+            Error::U8VectorToString { .. } => 436,
+            Error::EventPublish { .. } => 437,
+            Error::HelmListCommand { .. } => 438,
+            Error::HelmVersionCommand { .. } => 439,
+            Error::HelmUpgradeCommand { .. } => 440,
+            Error::HelmGetValuesCommand { .. } => 441,
+            Error::NotAKnownHelmChart { .. } => 442,
+            Error::KubeClientSetBuilderNs { .. } => 443,
+            Error::EventRecorderOptionsAbsent { .. } => 444,
+            Error::PodUidIsNone { .. } => 445,
+            Error::HelmClientNs { .. } => 446,
+            Error::HelmUpgradeOptionsAbsent { .. } => 446,
+            Error::SemverParse { .. } => 447,
+            Error::InvalidUpgradePath { .. } => 448,
+            Error::SerializeEventNote { .. } => 449,
+            Error::TooManyIoEnginePods { .. } => 450,
+            Error::ThinProvisioningOptionsAbsent { .. } => 451,
+            Error::EventChannelSend { .. } => 452,
+            Error::HelmChartVersionLabelHasNoValue { .. } => 453,
+            Error::NoNamespaceInPod { .. } => 454,
+            Error::UmbrellaChartNotUpgraded { .. } => 455,
+            Error::CoreChartUpgradeNoneChartDir { .. } => 456,
+            Error::NoRestDeployment { .. } => 457,
+            Error::NoVersionLabelInDeployment { .. } => 458,
+            Error::ListDeploymentsWithLabel { .. } => 459,
+            Error::InvalidHelmUpgrade { .. } => 460,
+            Error::RollbackForbidden { .. } => 461,
+            Error::UpgradeEventNotPresent { .. } => 462,
+            Error::NoDeploymentPresent { .. } => 463,
+            Error::MessageInEventNotPresent { .. } => 464,
+            Error::NodesInCordonedState { .. } => 465,
+            Error::SingleReplicaVolumeErr { .. } => 466,
+            Error::VolumeRebuildInProgress { .. } => 467,
+            Error::EventSerdeDeserialization { .. } => 468,
+            Error::ServiceAccountCreate { .. } => 469,
+            Error::ServiceAccountDelete { .. } => 470,
+            Error::ClusterRoleCreate { .. } => 471,
+            Error::ClusterRoleDelete { .. } => 472,
+            Error::ClusterRoleBindingDelete { .. } => 473,
+            Error::ClusterRoleBindingCreate { .. } => 474,
+            Error::UpgradeJobCreate { .. } => 475,
+            Error::UpgradeJobDelete { .. } => 476,
+            Error::ReferenceDeploymentInvalidImage { .. } => 477,
+            Error::ReferenceDeploymentNoImage { .. } => 478,
+            Error::ReferenceDeploymentNoSpec { .. } => 479,
+            Error::ReferenceDeploymentNoPodTemplateSpec { .. } => 480,
+            Error::ReferenceDeploymentNoContainers { .. } => 481,
+            Error::NodeSpecNotPresent { .. } => 482,
+            Error::PodNameNotPresent { .. } => 483,
+            Error::UpgradeJobStatusNotPresent { .. } => 484,
+            Error::UpgradeJobNotPresent { .. } => 485,
+            Error::ListDeploymantsWithLabel { .. } => 486,
+            Error::ListEventsWithFieldSelector { .. } => 487,
+            Error::ListPVC { .. } => 488,
+            Error::ListVolumes { .. } => 489,
+            Error::GetUpgradeJob { .. } => 490,
+            Error::GetServiceAccount { .. } => 491,
+            Error::GetClusterRole { .. } => 492,
+            Error::GetClusterRoleBinding { .. } => 493,
+            Error::OpenapiClientConfiguration { .. } => 494,
+            Error::SourceTargetVersionSame { .. } => 495,
+            Error::NotAValidSourceForUpgrade { .. } => 496,
+            Error::K8sClient { .. } => 497,
+            Error::RegexCompile { .. } => 498,
+        }
+    }
+}

@@ -7,8 +7,10 @@ use crate::{
             RollbackForbidden, UmbrellaChartNotUpgraded,
         },
     },
-    helm::{client::HelmReleaseClient, values::generate_values_args},
-    upgrade,
+    upgrade_job::{
+        helm::{client::HelmReleaseClient, values::generate_values_args},
+        upgrade,
+    },
 };
 use regex::Regex;
 use semver::Version;

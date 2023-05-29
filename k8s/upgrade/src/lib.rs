@@ -1,12 +1,6 @@
-/// Module for upgrade related constants.
-pub mod constant;
-/// Module for upgrade client errors.
-pub mod error;
-/// Validations before applying upgrade.
-pub mod preflight_validations;
-/// Library for upgrade module.
-pub mod upgrade_lib;
-/// Module for resources of upgrade.
-pub mod upgrade_resources;
-/// Module for user messages.
-pub mod user_prompt;
+/// Common code used by plugin and job.
+pub mod common;
+/// Module for resources of upgrade job.
+pub mod upgrade_job;
+/// Module for resources of upgrade plugin.
+pub mod upgrade_plugin;

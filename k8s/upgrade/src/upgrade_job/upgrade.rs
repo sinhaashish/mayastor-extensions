@@ -1,8 +1,8 @@
 use crate::{
     common::{constants::PRODUCT, error::Result},
-    events::event_recorder::EventRecorder,
-    helm::upgrade::HelmUpgrade,
-    opts::CliArgs,
+    upgrade_job::{
+        events::event_recorder::EventRecorder, helm::upgrade::HelmUpgrade, opts::CliArgs,
+    },
 };
 use data_plane::upgrade_data_plane;
 

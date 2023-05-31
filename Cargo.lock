@@ -235,7 +235,7 @@ dependencies = [
  "hyper",
  "k8s-openapi",
  "kube",
- "mbus_api",
+ "mbus-api",
  "mime",
  "nats",
  "once_cell",
@@ -2094,25 +2094,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b87248edafb776e59e6ee64a79086f65890d3510f2c656c000bf2a7e8a0aea40"
 
 [[package]]
-name = "mbus_api"
+name = "mbus-api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-nats 0.28.0",
  "async-trait",
  "bytes",
- "chrono",
- "dashmap",
  "futures",
- "opentelemetry",
- "opentelemetry-jaeger",
  "serde",
  "serde_json",
+ "snafu",
  "tokio",
  "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "url",
  "uuid",
 ]
 

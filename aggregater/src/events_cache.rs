@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 // use message::*;
 
 // use crate::{message, nats::TypedNats};
-use mbus_api::mbus_nats::{NatsMessageBus, Bus};
+use mbus_api::{Bus, mbus_nats::NatsMessageBus} ;
 use mbus_api::message::EventMessage;
 //use crate::events_store::*;
 use crate::events_store_cr::*;
@@ -218,7 +218,7 @@ pub async fn store_events(mut nats: NatsMessageBus) -> Result<(), String> {
     }).unwrap();
     let mut count = 0;
     loop {
-            if let Some(message) = sub.next().await
+            if let Some(message) = sub.next(&mut nats).await
             {
                 count += 1;
                 println!(

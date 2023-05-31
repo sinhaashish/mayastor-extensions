@@ -51,7 +51,7 @@ kube = { version = "0.78.0", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.17.0", features = ["v1_20"] }
 schemars = "0.8.11"
 
-mbus_api = { path = "../dependencies/control-plane/utils/dependencies/mbus_api" }
+mbus-api = { path = "../dependencies/control-plane/utils/dependencies/mbus-api" }
 
 rpc = { path = "../dependencies/control-plane/rpc" }
 utils = { path = "../dependencies/control-plane/utils/utils-lib" }

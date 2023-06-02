@@ -8,4 +8,4 @@ pub(crate) mod helm;
 pub(crate) mod opts;
 
 /// Contains upgrade functionality.
-pub(crate) mod upgrade;
+pub(crate) mod upgrade_components;

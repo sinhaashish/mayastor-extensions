@@ -9,7 +9,7 @@ use crate::{
     },
     upgrade_job::{
         helm::{client::HelmReleaseClient, values::generate_values_args},
-        upgrade,
+        upgrade_components::path,
     },
 };
 use regex::Regex;
@@ -95,7 +95,7 @@ impl HelmUpgradeBuilder {
         // The version of the Core helm chart (installed as a the parent chart or as a dependent
         // chart) which is installed in the cluster.
         let from_version: Version =
-            upgrade::path::version_from_rest_deployment_label(namespace.as_str()).await?;
+            path::version_from_rest_deployment_label(namespace.as_str()).await?;
 
         // The version of the Core chart which we are (maybe) going to.
         let chart_dir: PathBuf = self.core_chart_dir.ok_or(
@@ -105,7 +105,7 @@ impl HelmUpgradeBuilder {
             .build(),
         )?;
         let chart_yaml_path = chart_dir.join("Chart.yaml");
-        let to_version: Version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
+        let to_version: Version = path::version_from_chart_yaml_file(chart_yaml_path)?;
 
         // Check if already upgraded.
         let already_upgraded = to_version.eq(&from_version);
@@ -150,7 +150,7 @@ impl HelmUpgradeBuilder {
                     }
                 );
 
-                let upgrade_path_is_valid = upgrade::path::is_valid_for_core_chart(&from_version)?;
+                let upgrade_path_is_valid = path::is_valid_for_core_chart(&from_version)?;
                 ensure!(upgrade_path_is_valid, InvalidUpgradePath);
             }
 

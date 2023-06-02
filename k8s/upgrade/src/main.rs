@@ -4,22 +4,21 @@ use crate::{
         validate_helm_chart_dir, validate_helm_release, validate_helmv3_in_path,
         validate_namespace, validate_rest_endpoint,
     },
+    upgrade_job::opts,
 };
+
 use clap::Parser;
 
 use opts::CliArgs;
 use tracing::{error, info};
-use upgrade::upgrade;
 use utils::{
     raw_version_str,
     tracing_telemetry::{default_tracing_tags, flush_traces, init_tracing},
 };
 
 mod common;
-mod events;
-mod helm;
-mod opts;
-mod upgrade;
+mod upgrade_job;
+mod upgrade_plugin;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,11 +29,13 @@ async fn main() -> Result<()> {
         error
     })?;
 
-    upgrade(&opts).await.map_err(|error| {
-        error!(%error, "Failed to upgrade {PRODUCT}");
-        flush_traces();
-        error
-    })
+    upgrade_job::upgrade_components::upgrade(&opts)
+        .await
+        .map_err(|error| {
+            error!(%error, "Failed to upgrade {PRODUCT}");
+            flush_traces();
+            error
+        })
 }
 
 /// Initialize logging components -- tracing.

@@ -613,8 +613,24 @@ nats:
     replicas: 3
   # The nats box can be installed for debugging, by default its enabled.
   natsbox:
-    enabled: false
+    enabled: true
 
+stats:
+  # -- Enable stats
+  enabled: true
+  # -- Log level for stats
+  logLevel: "info"
+  resources:
+    limits:
+      # -- Cpu limits for stats
+      cpu: "100m"
+      # -- Memory limits for stats
+      memory: "32Mi"
+    requests:
+      # -- Cpu requests for stats
+      cpu: "50m"
+      # -- Memory requests for stats
+      memory: "16Mi"
 
 obs:
   callhome:

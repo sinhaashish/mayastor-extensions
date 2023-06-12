@@ -28,9 +28,9 @@ spec:
       {{- end }}
       containers:
         - name: stats-aggregator
-          image: "{{ .Values.image.registry }}/sinhaashish/{{ .Chart.Name }}-stats-aggregator:stats"
+          image: "{{ .Values.image.registry }}/sinhaashish/{{ .Chart.Name }}-stats:stats"
           command:
-            - stats-aggregator
+            - stats
           ports:
             - containerPort: 9090
               protocol: TCP

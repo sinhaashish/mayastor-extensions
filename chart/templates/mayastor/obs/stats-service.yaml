@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: {{ .Release.Name }}-stats-aggregator
   labels:
-    app: stats-aggreagter
+    app: stats-aggreagtor
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
     {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:

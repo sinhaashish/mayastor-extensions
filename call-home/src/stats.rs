@@ -1,9 +1,15 @@
-use crate::{common::error, events::store::events_store::initialize};
-use k8s_openapi::api::core::v1::ConfigMap;
+use clap::Parser;
 mod common;
 mod events;
-use clap::Parser;
-use events::cache::events_cache::{Cache, EventSet};
+use crate::{
+    common::errors,
+    events::{
+        cache::events_cache::{Cache, EventSet},
+        store::events_store::initialize,
+    },
+};
+use std::time::Duration;
+use k8s_openapi::api::core::v1::ConfigMap;
 use mbus_api::mbus_nats::{message_bus_init, NatsMessageBus};
 use tracing::{error, info};
 use utils::{
@@ -11,20 +17,20 @@ use utils::{
     tracing_telemetry::{default_tracing_tags, flush_traces, init_tracing},
 };
 
-async fn mbus_init(mbus_url: &str) -> error::Result<NatsMessageBus> {
-    let message_bus = message_bus_init(mbus_url).await;
+pub(crate) async fn mbus_init(mbus_url: &str) -> errors::Result<NatsMessageBus> {
+    let message_bus: NatsMessageBus = message_bus_init(mbus_url).await;
     Ok(message_bus)
 }
 
 /// Initialize events store cache from config map.
-async fn initialize_events_cache(init_data: ConfigMap) {
+pub(crate) async fn initialize_events_cache(init_data: ConfigMap) {
     let events = EventSet::from_event_store(init_data).unwrap();
     Cache::initialize(events);
 }
 
 /// Initialize events store.
-async fn initialize_events_store(namespace: &str) -> error::Result<ConfigMap> {
-    let event_store = initialize(namespace).await?;
+pub(crate) async fn initialize_events_store(namespace: &str) -> errors::Result<ConfigMap> {
+    let event_store: ConfigMap = initialize(namespace).await?;
     Ok(event_store)
 }
 
@@ -47,22 +53,31 @@ impl Cli {
 }
 
 #[tokio::main]
-async fn main() -> error::Result<()> {
+async fn main() -> errors::Result<()> {
+
     init_logging();
     info!("stats aggregation started!");
 
     let args = Cli::args();
+    tokio::time::sleep(Duration::from_secs(30)).await;
 
     utils::print_package_info!();
 
     let m_bus = mbus_init(args.mbus_url.as_str()).await?;
     info!("mbus initialized successfully!");
+    tokio::time::sleep(Duration::from_secs(30)).await;
+
+    // while !config_map_ready().await {
+    //     tokio::time::sleep(Duration::from_secs(1)).await;
+    //  }
 
     let init_data = initialize_events_store(&args.namespace).await?;
     info!("event store initialized successfully!");
+    tokio::time::sleep(Duration::from_secs(30)).await;
 
     initialize_events_cache(init_data).await;
     info!("event cache initialized successfully!");
+    tokio::time::sleep(Duration::from_secs(30)).await;
 
     // spawn a new task to store the data in cache.
     tokio::spawn(async move {
@@ -95,7 +110,7 @@ async fn main() -> error::Result<()> {
 }
 
 /// Initialize logging components -- tracing.
-fn init_logging() {
+pub(crate) fn init_logging() {
     let tags = default_tracing_tags(raw_version_str(), env!("CARGO_PKG_VERSION"));
 
     init_tracing("stats", tags, None);

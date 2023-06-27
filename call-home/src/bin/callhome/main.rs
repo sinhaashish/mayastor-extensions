@@ -9,7 +9,8 @@ use crate::{
     transmitter::*,
 };
 use clap::Parser;
-use obs::common::constants::*;
+use obs::common::{constants::*, utils::event_stats};
+
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
 use std::time;
@@ -102,12 +103,13 @@ async fn run() -> anyhow::Result<()> {
         })
         .await?;
         let output = output.map_err(|error| anyhow::anyhow!("encryption failed: {:?}", error))?;
+        
 
         // POST data to receiver API.
-        match receiver.post(output).await {
-            Ok(response) => info!(?response, "Success"),
-            Err(e) => error!(?e, "failed HTTP POST request"),
-        }
+        // match receiver.post(output).await {
+        //     Ok(response) => info!(?response, "Success"),
+        //     Err(e) => error!(?e, "failed HTTP POST request"),
+        // }
 
         // Block until next transmission window.
         sleep(sleep_duration).await;
@@ -124,11 +126,12 @@ async fn generate_report(
     let mut report = Report {
         product_name: PRODUCT.to_string(),
         k8s_cluster_id,
-        deploy_namespace,
+        deploy_namespace: deploy_namespace.clone(),
         product_version,
         ..Default::default()
     };
-
+    // Fetch events data
+    event_stats(deploy_namespace.as_str());
     let k8s_node_count = k8s_client.get_node_len().await;
     match k8s_node_count {
         Ok(k8s_node_count) => report.k8s_node_count = k8s_node_count as u8,

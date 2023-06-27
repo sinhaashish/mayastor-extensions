@@ -34,6 +34,8 @@ pub(crate) struct Pools {
     max_size_in_bytes: u64,
     min_size_in_bytes: u64,
     mean_size_in_bytes: u64,
+    // pools_created: u64,
+    // pools_deleted: u64,
     capacity_percentiles_in_bytes: Percentiles,
 }
 impl Pools {

@@ -16,6 +16,9 @@ pub const DEFAULT_RELEASE_NAME: &str = "mayastor";
 /// Defines the Label select for mayastor REST API.
 pub const API_REST_LABEL_SELECTOR: &str = "app=api-rest";
 
+/// Defines the Label select for mayastor callhome.
+pub const API_CALL_HOME_LABEL_SELECTOR: &str = "app=obs-callhome";
+
 /// Defines the Label key for event store.
 pub const EVENT_STORE_LABLE_KEY: &str = "app";
 
@@ -95,8 +98,10 @@ pub const RECEIVER_ENDPOINT: &str = "https://openebs.phonehome.datacore.com/open
 
 const CALL_HOME_FREQUENCY_IN_HOURS: i64 = 24;
 
+const CALL_HOME_FREQUENCY_IN_MINS: i64 = 1;
+
 pub fn call_home_frequency() -> std::time::Duration {
-    chrono::Duration::hours(CALL_HOME_FREQUENCY_IN_HOURS)
+    chrono::Duration::minutes(CALL_HOME_FREQUENCY_IN_MINS)
         .to_std()
         .map_err(|error| {
             anyhow::anyhow!("failed to parse call-home frequency duration: {:?}", error)

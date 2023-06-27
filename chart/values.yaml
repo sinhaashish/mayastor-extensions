@@ -613,7 +613,7 @@ nats:
     replicas: 3
   # The nats box can be installed for debugging, by default its enabled.
   natsbox:
-    enabled: false
+    enabled: true
 
 
 obs:

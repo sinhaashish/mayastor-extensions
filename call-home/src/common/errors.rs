@@ -106,6 +106,37 @@ pub enum Error {
         namespace: String,
     },
 
+    /// Error for when a Kubernetes API request for GET-ing a list of Service filtered by
+    /// label(s) fails.
+    #[snafu(display(
+        "Failed to list Service with label {} in namespace {}: {}",
+        label,
+        namespace,
+        source
+    ))]
+    ListServiceWithLabel {
+        source: kube::Error,
+        label: String,
+        namespace: String,
+    },
+
+    /// Error for when a getting the stats fails
+    /// label(s) fails.
+    #[snafu(display("Error while fetching events stats: {}", source))]
+    GetEventsStats { source: reqwest::Error },
+
+    /// Error for when the service.metadata.name is a None.
+    #[snafu(display("Service name not present."))]
+    ServiceNameNotPresent,
+
+    /// Error for when .spec is None for the reference Service.
+    #[snafu(display("No .spec found for the reference Service"))]
+    ReferenceServiceNoSpec,
+
+    /// Error for no Ports present for service.
+    #[snafu(display("No ports present for service."))]
+    NoPortsPresent,
+
     /// Error for no Deployment present.
     #[snafu(display("No deployment present."))]
     NoDeploymentPresent,

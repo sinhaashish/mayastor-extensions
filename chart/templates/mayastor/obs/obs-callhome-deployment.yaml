@@ -35,7 +35,8 @@ spec:
       {{- end }}
       containers:
         - name: obs-callhome
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-obs-callhome:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+          #image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-obs-callhome:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+          image: "{{ .Values.image.registry }}/sinhaashish/{{ .Chart.Name }}-obs-callhome:stats"
           args:
             - "-e http://{{ .Release.Name }}-api-rest:8081"
             - "-n {{ .Release.Namespace }}"
@@ -52,7 +53,8 @@ spec:
               memory: {{ .Values.obs.callhome.resources.requests.memory | quote }}
         {{- if .Values.obs.callhome.enabled }}
         - name: obs-callhome-stats
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-obs-callhome-stats:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+          #image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-obs-callhome-stats:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+          image: "{{ .Values.image.registry }}/sinhaashish/{{ .Chart.Name }}-obs-callhome-stats:stats"
           ports:
             - containerPort: 9090
               protocol: TCP

@@ -12,7 +12,7 @@ use mbus_api::{
     message::EventMessage,
     Bus,
 };
-use obs::common::errors;
+use obs::common::{errors, utils::event_stats};
 use prometheus::{Encoder, Registry};
 use snafu::ResultExt;
 use std::net::SocketAddr;
@@ -148,7 +148,6 @@ pub(crate) fn init_logging(args: &Cli) {
 }
 
 fn stats_route(cfg: &mut web::ServiceConfig) {
-    info!(" configuted at /stats");
     cfg.route("/stats", web::get().to(metrics_handlers));
 }
 

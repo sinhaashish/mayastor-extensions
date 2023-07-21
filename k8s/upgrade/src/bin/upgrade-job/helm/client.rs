@@ -1,15 +1,4 @@
-use crate::{
-    common::{
-        error::{
-            CollectDirEntries, CreateCrd, HelmClientNs, HelmCommand, HelmGetValuesCommand,
-            HelmListCommand, HelmRelease, HelmUpgradeCommand, InvalidHelmChartCrdDir,
-            ReadingDirectoryContents, ReadingFile, Result, U8VectorToString, YamlParseFromFile,
-            YamlParseFromSlice,
-        },
-        kube_client::KubeClientSet,
-    },
-    vec_to_strings,
-};
+use crate::{common::kube_client::KubeClientSet, vec_to_strings};
 use k8s_openapi::{
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition as Crd, serde,
 };
@@ -19,6 +8,11 @@ use serde::Deserialize;
 use snafu::{ensure, IntoError, ResultExt};
 use std::{fs, path::PathBuf, process::Command, str};
 use tracing::{debug, info};
+use upgrade::common::error::{
+    CollectDirEntries, CreateCrd, HelmClientNs, HelmCommand, HelmGetValuesCommand, HelmListCommand,
+    HelmRelease, HelmUpgradeCommand, InvalidHelmChartCrdDir, ReadingDirectoryContents, ReadingFile,
+    Result, U8VectorToString, YamlParseFromFile, YamlParseFromSlice,
+};
 
 /// This struct is used to deserialize the output of `helm list -n <namespace> --deployed -o yaml`.
 #[derive(Clone, Deserialize)]

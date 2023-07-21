@@ -1,19 +1,16 @@
-use crate::{
-    common::{
-        constants::CHART_VERSION_LABEL_KEY,
-        error::{
-            ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, ReadingFile,
-            Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
-        },
-        kube_client::KubeClientSet,
-    },
-    helm::chart::Chart,
-};
+use crate::{common::kube_client::KubeClientSet, helm::chart::Chart};
 use kube_client::{api::ListParams, ResourceExt};
 use semver::Version;
 use serde::Deserialize;
 use snafu::{ensure, ResultExt};
 use std::{fs, path::PathBuf};
+use upgrade::common::{
+    constants::CHART_VERSION_LABEL_KEY,
+    error::{
+        ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, ReadingFile,
+        Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
+    },
+};
 use utils::API_REST_LABEL;
 
 /// Validates the upgrade path from 'from' Version to 'to' Version for the Core helm chart.

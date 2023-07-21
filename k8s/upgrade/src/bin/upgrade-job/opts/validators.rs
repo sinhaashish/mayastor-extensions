@@ -1,22 +1,17 @@
-use crate::{
-    common::{
-        constants::CORE_CHART_NAME,
-        error::{
-            FindingHelmChart, GetNamespace, HelmCommand, HelmListCommand, HelmRelease, HelmVersion,
-            HelmVersionCommand, ListStorageNodes, NotADirectory, NotAFile, ReadingFile,
-            RegexCompile, Result, U8VectorToString, ValidateDirPath, ValidateFilePath,
-            YamlParseFromFile,
-        },
-        kube_client::KubeClientSet,
-        rest_client::RestClientSet,
-    },
-    helm::chart::Chart,
-    vec_to_strings,
-};
+use crate::{common::kube_client::KubeClientSet, helm::chart::Chart, vec_to_strings};
 use regex::bytes::Regex;
 use snafu::{ensure, ResultExt};
 use std::{fs, path::PathBuf, process::Command, str};
 use tracing::debug;
+use upgrade::common::{
+    constants::CORE_CHART_NAME,
+    error::{
+        FindingHelmChart, GetNamespace, HelmCommand, HelmListCommand, HelmRelease, HelmVersion,
+        HelmVersionCommand, ListStorageNodes, NotADirectory, NotAFile, ReadingFile, RegexCompile,
+        Result, U8VectorToString, ValidateDirPath, ValidateFilePath, YamlParseFromFile,
+    },
+    utils::RestClientSet,
+};
 
 /// Validate that the helm release specified in the CLI options exists in the namespace,
 /// which is also specified in the CLI options.

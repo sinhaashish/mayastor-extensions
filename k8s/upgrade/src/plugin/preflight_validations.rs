@@ -1,18 +1,25 @@
-use crate::plugin::{
-    constants::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH},
-    error,
-    upgrade::{get_pvc_from_uuid, get_source_version},
-    user_prompt,
+use crate::{
+    common::{
+        constants::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH},
+        error::{
+            InvalidUpgradePath, ListStorageNodes, ListVolumes, NodeSpecNotPresent,
+            NodesInCordonedState, NotAValidSourceForUpgrade, OpenapiClientConfiguration, Result,
+            SemverParse, SingleReplicaVolumeErr, VolumeRebuildInProgress,
+            YamlParseBufferForUnsupportedVersion,
+        },
+        utils::{is_rebuilding, RestClientSet},
+    },
+    plugin::{
+        upgrade::{get_pvc_from_uuid, get_source_version},
+        user_prompt,
+    },
 };
-use openapi::{
-    clients::tower::{self, Configuration},
-    models::CordonDrainState,
-};
+use openapi::models::CordonDrainState;
 use semver::Version;
 use serde::Deserialize;
 use serde_yaml;
 use snafu::ResultExt;
-use std::{collections::HashSet, ops::Deref, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf};
 
 /// Validation to be done before applying upgrade.
 pub async fn preflight_check(
@@ -23,7 +30,7 @@ pub async fn preflight_check(
     skip_replica_rebuild: bool,
     skip_cordoned_node_validation: bool,
     skip_upgrade_path_validation: bool,
-) -> error::Result<()> {
+) -> Result<()> {
     console_logger::info(user_prompt::UPGRADE_WARNING, "");
     // Initialise the REST client.
     let config = kube_proxy::ConfigBuilder::default_api_rest()
@@ -32,8 +39,8 @@ pub async fn preflight_check(
         .with_target_mod(|t| t.with_namespace(namespace))
         .build()
         .await
-        .context(error::OpenapiClientConfiguration)?;
-    let rest_client = RestClient::new_with_config(config);
+        .context(OpenapiClientConfiguration)?;
+    let rest_client = RestClientSet::new_with_config(config);
 
     if !skip_upgrade_path_validation {
         upgrade_path_validation(namespace).await?;
@@ -54,17 +61,17 @@ pub async fn preflight_check(
 }
 
 /// Prompt to user and error out if some nodes are already in cordoned state.
-pub(crate) async fn already_cordoned_nodes_validation(client: &RestClient) -> error::Result<()> {
+pub(crate) async fn already_cordoned_nodes_validation(client: &RestClientSet) -> Result<()> {
     let mut cordoned_nodes_list = Vec::new();
     let nodes = client
         .nodes_api()
         .get_nodes(None)
         .await
-        .context(error::ListStorageNodes)?;
+        .context(ListStorageNodes)?;
     let nodelist = nodes.into_body();
     for node in nodelist {
         let node_spec = node.spec.ok_or(
-            error::NodeSpecNotPresent {
+            NodeSpecNotPresent {
                 node: node.id.to_string(),
             }
             .build(),
@@ -82,13 +89,13 @@ pub(crate) async fn already_cordoned_nodes_validation(client: &RestClient) -> er
             user_prompt::CORDONED_NODE_WARNING,
             &cordoned_nodes_list.join("\n"),
         );
-        return error::NodesInCordonedState.fail();
+        return NodesInCordonedState.fail();
     }
     Ok(())
 }
 
 /// Prompt to user and error out if the cluster has single replica volume.
-pub(crate) async fn single_volume_replica_validation(client: &RestClient) -> error::Result<()> {
+pub(crate) async fn single_volume_replica_validation(client: &RestClientSet) -> Result<()> {
     // let mut single_replica_volumes = Vec::new();
     // The number of volumes to get per request.
     let max_entries = 200;
@@ -101,7 +108,7 @@ pub(crate) async fn single_volume_replica_validation(client: &RestClient) -> err
             .volumes_api()
             .get_volumes(max_entries, None, starting_token)
             .await
-            .context(error::ListVolumes)?;
+            .context(ListVolumes)?;
 
         let v = vols.into_body();
         let single_rep_vol_ids: Vec<String> = v
@@ -120,48 +127,18 @@ pub(crate) async fn single_volume_replica_validation(client: &RestClient) -> err
             .join("\n");
 
         console_logger::error(user_prompt::SINGLE_REPLICA_VOLUME_WARNING, &data);
-        return error::SingleReplicaVolumeErr.fail();
+        return SingleReplicaVolumeErr.fail();
     }
     Ok(())
 }
 
 /// Prompt to user and error out if any rebuild in progress.
-pub(crate) async fn rebuild_in_progress_validation(client: &RestClient) -> error::Result<()> {
-    if is_rebuild_in_progress(client).await? {
+pub(crate) async fn rebuild_in_progress_validation(client: &RestClientSet) -> Result<()> {
+    if is_rebuilding(client).await? {
         console_logger::error(user_prompt::REBUILD_WARNING, "");
-        return error::VolumeRebuildInProgress.fail();
+        return VolumeRebuildInProgress.fail();
     }
     Ok(())
-}
-
-/// Check for rebuild in progress.
-pub(crate) async fn is_rebuild_in_progress(client: &RestClient) -> error::Result<bool> {
-    // The number of volumes to get per request.
-    let max_entries = 200;
-    let mut starting_token = Some(0_isize);
-
-    // The last paginated request will set the `starting_token` to `None`.
-    while starting_token.is_some() {
-        let vols = client
-            .volumes_api()
-            .get_volumes(max_entries, None, starting_token)
-            .await
-            .context(error::ListVolumes)?;
-        let volumes = vols.into_body();
-        starting_token = volumes.next_token;
-        for volume in volumes.entries {
-            if let Some(target) = &volume.state.target {
-                if target
-                    .children
-                    .iter()
-                    .any(|child| child.rebuild_progress.is_some())
-                {
-                    return Ok(true);
-                }
-            }
-        }
-    }
-    Ok(false)
 }
 
 /// Struct to deserialize the unsupported version yaml.
@@ -185,14 +162,14 @@ impl TryFrom<&[u8]> for UnsupportedVersions {
     }
 }
 
-pub(crate) async fn upgrade_path_validation(namespace: &str) -> error::Result<()> {
+pub(crate) async fn upgrade_path_validation(namespace: &str) -> Result<()> {
     let unsupported_version_buf =
         &std::include_bytes!("../../config/unsupported_versions.yaml")[..];
     let unsupported_versions = UnsupportedVersions::try_from(unsupported_version_buf)
-        .context(error::YamlParseBufferForUnsupportedVersion)?;
+        .context(YamlParseBufferForUnsupportedVersion)?;
     let source_version = get_source_version(namespace).await?;
 
-    let source = Version::parse(source_version.as_str()).context(error::SemverParse {
+    let source = Version::parse(source_version.as_str()).context(SemverParse {
         version_string: source_version.clone(),
     })?;
 
@@ -206,36 +183,13 @@ pub(crate) async fn upgrade_path_validation(namespace: &str) -> error::Result<()
             user_prompt::UPGRADE_PATH_NOT_VALID,
             invalid_source_list.as_str(),
         );
-        return error::NotAValidSourceForUpgrade.fail();
+        return NotAValidSourceForUpgrade.fail();
     }
     let destination_version = get_image_version_tag();
 
     if destination_version.contains(UPGRADE_TO_DEVELOP_BRANCH) {
         console_logger::error("", user_prompt::UPGRADE_TO_UNSUPPORTED_VERSION);
-        return error::InvalidUpgradePath.fail();
+        return InvalidUpgradePath.fail();
     }
     Ok(())
-}
-
-/// New-Type for a RestClient over the tower openapi client.
-#[derive(Clone, Debug)]
-pub struct RestClient {
-    client: tower::ApiClient,
-}
-
-impl Deref for RestClient {
-    type Target = tower::ApiClient;
-
-    fn deref(&self) -> &Self::Target {
-        &self.client
-    }
-}
-
-impl RestClient {
-    /// Create new Rest Client from the given `Configuration`.
-    pub fn new_with_config(config: Configuration) -> RestClient {
-        Self {
-            client: tower::ApiClient::new(config),
-        }
-    }
 }

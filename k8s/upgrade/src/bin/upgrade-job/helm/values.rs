@@ -1,21 +1,19 @@
-use crate::{
-    common::{
-        constants::TWO_DOT_O,
-        error::{
-            ReadingFile, Result, SemverParse, TempFileCreation, U8VectorToString, WriteToTempFile,
-            YamlParseFromFile, YamlParseFromSlice,
-        },
-    },
-    helm::{
-        chart::CoreValues,
-        client::HelmReleaseClient,
-        yaml::yq::{YamlKey, YqV4},
-    },
+use crate::helm::{
+    chart::CoreValues,
+    client::HelmReleaseClient,
+    yaml::yq::{YamlKey, YqV4},
 };
 use semver::{Version, VersionReq};
 use snafu::ResultExt;
 use std::{fs, io::Write, path::Path, str};
 use tempfile::NamedTempFile as TempFile;
+use upgrade::common::{
+    constants::TWO_DOT_O,
+    error::{
+        ReadingFile, Result, SemverParse, TempFileCreation, U8VectorToString, WriteToTempFile,
+        YamlParseFromFile, YamlParseFromSlice,
+    },
+};
 
 /// This compiles all of the helm values options to be passed during the helm chart upgrade.
 pub(crate) fn generate_values_yaml_file(

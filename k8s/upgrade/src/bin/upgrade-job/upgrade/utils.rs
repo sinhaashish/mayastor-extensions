@@ -1,46 +1,12 @@
-use crate::common::{
-    constants::CHART_VERSION_LABEL_KEY,
-    error::{
-        HelmChartVersionLabelHasNoValue, ListStorageVolumes, NoNamespaceInPod, Result, SemverParse,
-    },
-    rest_client::RestClientSet,
-};
 use k8s_openapi::api::core::v1::Pod;
 use kube::{api::ObjectList, ResourceExt};
 use semver::{Version, VersionReq};
 use snafu::ResultExt;
 use tracing::{info, warn};
-
-/// Function to check for any volume rebuild in progress across the cluster
-pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
-    // The number of volumes to get per request.
-    let max_entries = 200;
-    let mut starting_token = Some(0_isize);
-
-    // The last paginated request will set the `starting_token` to `None`.
-    while starting_token.is_some() {
-        let vols = rest_client
-            .volumes_api()
-            .get_volumes(max_entries, None, starting_token)
-            .await
-            .context(ListStorageVolumes)?;
-
-        let volumes = vols.into_body();
-        starting_token = volumes.next_token;
-        for volume in volumes.entries {
-            if let Some(target) = &volume.state.target {
-                if target
-                    .children
-                    .iter()
-                    .any(|child| child.rebuild_progress.is_some())
-                {
-                    return Ok(true);
-                }
-            }
-        }
-    }
-    Ok(false)
-}
+use upgrade::common::{
+    constants::CHART_VERSION_LABEL_KEY,
+    error::{HelmChartVersionLabelHasNoValue, NoNamespaceInPod, Result, SemverParse},
+};
 
 /// This function returns 'true' only if all of the containers in the Pods contained in the
 /// ObjectList<Pod> have their Ready status.condition value set to true.

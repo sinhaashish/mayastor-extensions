@@ -1,11 +1,4 @@
-use crate::common::{
-    constants::PRODUCT,
-    error::{
-        EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
-        JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
-    },
-    kube_client::KubeClientSet,
-};
+use crate::common::kube_client::KubeClientSet;
 use k8s_openapi::{api::core::v1::ObjectReference, serde_json};
 use kube::runtime::events::{Event, EventType, Recorder};
 use serde::Serialize;
@@ -13,6 +6,13 @@ use snafu::{ensure, ResultExt};
 use std::{fmt::Display, time::Duration};
 use tokio::{select, sync::mpsc, time::sleep};
 use tracing::error;
+use upgrade::common::{
+    constants::PRODUCT,
+    error::{
+        EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
+        JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
+    },
+};
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all(serialize = "camelCase"))]
@@ -220,7 +220,7 @@ impl EventRecorder {
         K: ToString,
     {
         let note = EventNote::from(self).with_message(note.to_string());
-        let note_s = serde_json::to_string(&note).context(SerializeEventNote { note })?;
+        let note_s = serde_json::to_string(&note).context(SerializeEventNote {})?;
         self.publish(Event {
             type_: EventType::Normal,
             reason: format!("{PRODUCT}Upgrade"),
@@ -239,7 +239,7 @@ impl EventRecorder {
         K: ToString,
     {
         let note = EventNote::from(self).with_message(note.to_string());
-        let note_s = serde_json::to_string(&note).context(SerializeEventNote { note })?;
+        let note_s = serde_json::to_string(&note).context(SerializeEventNote {})?;
         self.publish(Event {
             type_: EventType::Warning,
             reason: format!("{PRODUCT}Upgrade"),

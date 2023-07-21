@@ -1,19 +1,17 @@
-use crate::{
-    common::error::{
-        NotAValidYamlKeyForStringValue, NotYqV4, RegexCompile, Result, U8VectorToString,
-        YqCommandExec, YqMergeCommand, YqSetCommand, YqVersionCommand,
-    },
-    vec_to_strings,
-};
+use crate::vec_to_strings;
 use regex::Regex;
 use snafu::{ensure, ResultExt};
 use std::{ops::Deref, path::Path, process::Command, str};
+use upgrade::common::error::{
+    NotAValidYamlKeyForStringValue, NotYqV4, RegexCompile, Result, U8VectorToString, YqCommandExec,
+    YqMergeCommand, YqSetCommand, YqVersionCommand,
+};
 
 /// This is a container for the String of an input yaml key.
 pub(crate) struct YamlKey(String);
 
 impl TryFrom<&str> for YamlKey {
-    type Error = crate::common::error::Error;
+    type Error = upgrade::common::error::Error;
 
     /// This generates a YamlKey after vetting it. A yaml dot notation
     /// pattern is considered a valid input.

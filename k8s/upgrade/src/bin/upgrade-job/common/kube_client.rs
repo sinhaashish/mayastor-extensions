@@ -1,4 +1,3 @@
-use crate::common::error::{K8sClientGeneration, KubeClientSetBuilderNs, Result};
 use k8s_openapi::{
     api::{
         apps::v1::Deployment,
@@ -8,6 +7,7 @@ use k8s_openapi::{
 };
 use kube::{api::Api, Client};
 use snafu::ResultExt;
+use upgrade::common::error::{K8sClientGeneration, KubeClientSetBuilderNs, Result};
 
 /// Builder for Kubernetes clients.
 #[derive(Default)]

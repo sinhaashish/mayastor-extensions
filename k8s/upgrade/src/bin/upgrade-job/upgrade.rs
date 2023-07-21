@@ -1,10 +1,8 @@
-use crate::{
-    common::{constants::PRODUCT, error::Result},
-    events::event_recorder::EventRecorder,
-    helm::upgrade::HelmUpgrade,
-    opts::CliArgs,
-};
+use crate::{events::event_recorder::EventRecorder, helm::upgrade::HelmUpgrade, opts::CliArgs};
+use upgrade::common::error::Result;
+
 use data_plane::upgrade_data_plane;
+use upgrade::common::constants::PRODUCT;
 
 /// Contains the data-plane upgrade logic.
 pub(crate) mod data_plane;

@@ -1,11 +1,11 @@
 use crate::{
-    common::{constants::PRODUCT, error::Result},
     opts::validators::{
         validate_helm_chart_dir, validate_helm_release, validate_helmv3_in_path,
         validate_namespace, validate_rest_endpoint,
     },
     upgrade::upgrade,
 };
+use ::upgrade::common::{constants::PRODUCT, error::Result};
 use clap::Parser;
 use opts::CliArgs;
 use tracing::{error, info};

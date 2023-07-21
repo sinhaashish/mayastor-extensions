@@ -1,17 +1,6 @@
 use crate::{
-    common::{
-        constants::{
-            AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, DRAIN_FOR_UPGRADE, IO_ENGINE_LABEL, PRODUCT,
-        },
-        error::{
-            DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
-            ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes, PodDelete, Result,
-            StorageNodeUncordon, TooManyIoEnginePods,
-        },
-        kube_client::KubeClientSet,
-        rest_client::RestClientSet,
-    },
-    upgrade::utils::{all_pods_are_ready, data_plane_is_upgraded, is_rebuilding},
+    common::kube_client::KubeClientSet,
+    upgrade::utils::{all_pods_are_ready, data_plane_is_upgraded},
 };
 use k8s_openapi::api::core::v1::Pod;
 use kube::{
@@ -22,6 +11,17 @@ use openapi::models::CordonDrainState;
 use snafu::ResultExt;
 use std::time::Duration;
 use tracing::info;
+use upgrade::common::{
+    constants::{
+        AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, DRAIN_FOR_UPGRADE, IO_ENGINE_LABEL, PRODUCT,
+    },
+    error::{
+        DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
+        ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes, ListStorageVolumes,
+        PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
+    },
+    utils::RestClientSet,
+};
 use utils::{API_REST_LABEL, ETCD_LABEL};
 
 // The stages after which rebuild validation will start.
@@ -270,6 +270,37 @@ async fn verify_data_plane_pod_is_running(
         tokio::time::sleep(duration).await;
     }
     Ok(())
+}
+
+/// Function to check for any volume rebuild in progress across the cluster
+pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
+    // The number of volumes to get per request.
+    let max_entries = 200;
+    let mut starting_token = Some(0_isize);
+
+    // The last paginated request will set the `starting_token` to `None`.
+    while starting_token.is_some() {
+        let vols = rest_client
+            .volumes_api()
+            .get_volumes(max_entries, None, starting_token)
+            .await
+            .context(ListStorageVolumes)?;
+
+        let volumes = vols.into_body();
+        starting_token = volumes.next_token;
+        for volume in volumes.entries {
+            if let Some(target) = &volume.state.target {
+                if target
+                    .children
+                    .iter()
+                    .any(|child| child.rebuild_progress.is_some())
+                {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
 }
 
 /// Wait for the rebuild to complete if any.

@@ -26,6 +26,7 @@ pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
             .context(ListStorageVolumes)?;
 
         let volumes = vols.into_body();
+        println!("ashish");
         starting_token = volumes.next_token;
         for volume in volumes.entries {
             if let Some(target) = &volume.state.target {

@@ -32,7 +32,7 @@ mkShell {
     llvmPackages.libclang
     niv
     nixpkgs-fmt
-    openapi-generator
+    paperclip
     openssl
     pkg-config
     pre-commit

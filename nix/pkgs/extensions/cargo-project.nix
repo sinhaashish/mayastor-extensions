@@ -12,7 +12,7 @@
 , openssl
 , git
 , gitVersions
-, openapi-generator
+, paperclip
 , which
 , utillinux
 , sourcer
@@ -67,6 +67,7 @@ let
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
     "dependencies/control-plane/openapi/src/lib.rs"
+    "dependencies/control-plane/openapi/templates"
     "dependencies/control-plane/control-plane/plugin"
     "dependencies/control-plane/control-plane/rest/openapi-specs"
     "dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh"
@@ -101,7 +102,7 @@ let
     GIT_VERSION_LONG = "${gitVersions.long}";
     GIT_VERSION = "${gitVersions.tag_or_long}";
 
-    nativeBuildInputs = [ clang pkg-config git openapi-generator which protobuf ];
+    nativeBuildInputs = [ clang pkg-config git paperclip which protobuf ];
     buildInputs = [ llvmPackages.libclang openssl utillinux ];
     doCheck = false;
   };

@@ -52,7 +52,7 @@ done
 
 case "$CHART_VERSION" in
 0.0.0)
-  latest_branch=$(git fetch -q && latest_release_branch $GIT_REMOTE $ROOT_DIR)
+  latest_branch=$(git fetch -q && latest_release_branch "$GIT_REMOTE" "$ROOT_DIR")
   latest=${latest_branch#release/}
   if [[ "$latest" =~ ^([0-9]+\.[0-9]+)$ ]]; then
     latest="$latest.0"
@@ -62,7 +62,7 @@ case "$CHART_VERSION" in
   ;;
 *)
   test "$(semver validate $CHART_VERSION)" = "valid"
-  TAG=$(semver bump patch $CHART_VERSION)
+  TAG=$CHART_VERSION
   ;;
 esac
 

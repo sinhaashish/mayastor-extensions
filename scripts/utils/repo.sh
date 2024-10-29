@@ -36,3 +36,33 @@ latest_release_branch() {
 
   echo "${latest_release_branch#*$remote/}"
 }
+
+# Get the latest tag created against a commit of a specific branch
+# Args:
+# 1. Branch name
+# 2. Git remote name
+# 3. Root directory of the repository
+latest_tag_at_branch() {
+  local -r branch=$1
+  local -r remote=${2:-"origin"}
+  local -r root_dir=${3:-"$ROOTDIR"}
+
+  pushd "$root_dir" > /dev/null
+
+  git fetch --quiet --tags "$remote"
+
+  local latest_tag=""
+  local git_tag_exit_code=0
+  local -r git_tag_output=$(git tag --list --merged "$remote"/"$branch" --sort=-creatordate 2> /dev/null) || git_tag_exit_code=$?
+  if [ "$git_tag_exit_code" = 0 ]; then
+    local head_exit_code=0
+    local -r head_output=$(echo $git_tag_output | head -n 1) || head_exit_code=$?
+    if [ "$head_exit_code" = 0 ]; then
+      latest_tag=$head_output
+    fi
+  fi
+
+  popd > /dev/null
+
+  echo "$latest_tag"
+}

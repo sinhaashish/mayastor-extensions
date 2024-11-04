@@ -211,7 +211,7 @@ impl ResourceDumper {
         log("Completed collection of Kubernetes resource specific information".to_string());
 
         let mut path: PathBuf = std::path::PathBuf::new();
-        path.push(&self.dir_path.clone());
+        path.push(self.dir_path.clone());
 
         // Collect ETCD dump specific to mayastor
         log("Collecting mayastor specific information from Etcd...".to_string());
@@ -255,7 +255,7 @@ impl ResourceDumper {
     /// Dumps information associated to given resource(s)
     pub(crate) async fn dump_etcd(&mut self) -> Result<(), Error> {
         let mut path: PathBuf = std::path::PathBuf::new();
-        path.push(&self.dir_path.clone());
+        path.push(self.dir_path.clone());
 
         self.etcd_dumper
             .as_mut()
